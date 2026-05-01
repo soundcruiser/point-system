@@ -1,0 +1,90 @@
+:root {
+    --primary: #3b82f6;
+    --success: #22c55e;
+    --secondary: #64748b;
+    --danger: #ef4444;
+    --bg: #f1f5f9;
+}
+
+body {
+    font-family: sans-serif;
+    background: var(--bg);
+    margin: 0;
+    display: flex;
+    justify-content: center;
+}
+
+#app {
+    width: 100%;
+    max-width: 500px;
+    background: white;
+    min-height: 100vh;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.05);
+}
+
+h1 { text-align: center; color: var(--secondary); font-size: 1.4rem; }
+
+/* ボタンデザイン */
+.btn-main {
+    width: 100%;
+    padding: 20px;
+    margin-bottom: 15px;
+    border: none;
+    border-radius: 15px;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.success { background: var(--success); }
+.primary { background: var(--primary); }
+.secondary { background: var(--secondary); }
+
+.btn-cancel {
+    width: 100%;
+    padding: 15px;
+    margin-top: 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #64748b;
+}
+
+/* QRエリア */
+#reader {
+    width: 100%;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+/* 履歴・商品リスト */
+.item-card, .history-card {
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hidden { display: none; }
+
+/* ログ通知 */
+.log-entry {
+    background: #333;
+    color: white;
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn { from { opacity: 0; transform: translateY(10px); } }

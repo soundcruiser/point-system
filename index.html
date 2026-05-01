@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QR Point Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>ポイント管理システム</h1>
+            <div id="user-info-bar" class="hidden"></div>
+        </header>
+
+        <!-- メインメニュー -->
+        <nav id="menu">
+            <!-- idを追加し、onclickを削除しました -->
+            <button id="btn-attendance" class="btn-main success">
+                <span class="icon">📅</span> 出席登録 (+10pt)
+            </button>
+            <button id="btn-items" class="btn-main primary">
+                <span class="icon">🎁</span> 商品交換
+            </button>
+            <button id="btn-history" class="btn-main secondary">
+                <span class="icon">📜</span> 全履歴を確認
+            </button>
+        </nav>
+
+        <!-- QRリーダー画面 -->
+        <section id="qr-section" class="hidden">
+            <div class="section-header">
+                <h2 id="mode-title">スキャン中...</h2>
+            </div>
+            <div id="reader"></div>
+            <button class="btn-cancel" onclick="stopScanner()">キャンセルして戻る</button>
+        </section>
+
+        <!-- 商品選択画面 -->
+        <section id="item-section" class="hidden">
+            <h2>商品を選んでください</h2>
+            <div id="item-list"></div>
+            <button class="btn-cancel" onclick="hideSections()">戻る</button>
+        </section>
+
+        <!-- 履歴表示画面 -->
+        <section id="history-section" class="hidden">
+            <h2>最近の履歴</h2>
+            <div id="history-list"></div>
+            <button class="btn-cancel" onclick="hideSections()">戻る</button>
+        </section>
+
+        <!-- 通知ログ -->
+        <div id="log-container"></div>
+    </div>
+
+    <!-- Firebase関係の処理 -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
