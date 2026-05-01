@@ -277,8 +277,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('btn-attendance').onclick = () => startProcess('attendance');
     document.getElementById('btn-items').onclick = () => showItems();
-    document.getElementById('btn-test-sound-success').onclick = () => notify("音テスト: 成功", "success");
-    document.getElementById('btn-test-sound-error').onclick = () => notify("音テスト: 失敗", "error");
     document.getElementById('btn-history').onclick = () => viewHistory();
     document.getElementById('btn-user-admin').onclick = () => window.viewUsers();
 });
