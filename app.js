@@ -147,6 +147,7 @@ async function viewHistory() {
 // --- QR処理 ---
 function initScanner() {
     if (!scanner) scanner = new Html5Qrcode("reader");
+    if (scanner.isScanning) return;
     scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
         window.stopScanner();
         if (currentMode === 'attendance') processAttendance(text);
