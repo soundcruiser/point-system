@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import { getFirestore, doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs, serverTimestamp, increment, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, addDoc, setDoc, collection, query, where, getDocs, serverTimestamp, increment, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -15,20 +15,16 @@ const items = [
     { id: 'nikuman', name: '肉まん', cost: 100 }
 ];
 
-// --- 画面操作（windowに登録してHTMLのonclickから呼べるようにする） ---
+// --- 画面操作 ---
 window.hideSections = function() {
-    console.log("全セクション非表示");
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
     document.getElementById('menu').classList.remove('hidden');
-    
-    // カメラが動いていれば、画面遷移の邪魔をしないよう「後回し」で止める
     if (scanner && scanner.isScanning) {
         scanner.stop().catch(() => {});
     }
 };
 
 window.stopScanner = function() {
-    console.log("キャンセル実行");
     window.hideSections();
 };
 
@@ -61,6 +57,51 @@ function showItems() {
     document.getElementById('item-section').classList.remove('hidden');
 }
 
+// --- 利用者管理機能 ---
+window.viewUsers = async function() {
+    const list = document.getElementById('user-list');
+    document.getElementById('menu').classList.add('hidden');
+    document.getElementById('user-admin-section').classList.remove('hidden');
+    list.innerHTML = "読み込み中...";
+    try {
+        const snap = await getDocs(collection(db, "users"));
+        if (snap.empty) {
+            list.innerHTML = "登録された利用者はいません";
+            return;
+        }
+        let html = "<table style='width:100%; border-collapse: collapse; font-size: 14px;'>";
+        html += "<tr style='background:#eee;'><th>ID</th><th>名前</th><th>pt</th></tr>";
+        snap.forEach(doc => {
+            const u = doc.data();
+            html += `<tr style='border-bottom:1px solid #ddd;'>
+                <td style='padding:8px;'>${doc.id}</td>
+                <td style='padding:8px;'>${u.name || '---'}</td>
+                <td style='padding:8px; text-align:right;'>${u.points}pt</td>
+            </tr>`;
+        });
+        html += "</table>";
+        list.innerHTML = html;
+    } catch (e) { list.innerHTML = "読み込みエラー"; }
+};
+
+window.addUser = async function() {
+    const id = document.getElementById('new-user-id').value.trim();
+    const name = document.getElementById('new-user-name').value.trim();
+    if(!id || !name) return addLog("入力してください");
+    try {
+        await setDoc(doc(db, "users", id), {
+            name: name,
+            points: 0,
+            createdAt: serverTimestamp()
+        });
+        addLog("登録完了！");
+        document.getElementById('new-user-id').value = "";
+        document.getElementById('new-user-name').value = "";
+        window.viewUsers(); 
+    } catch (e) { addLog("登録失敗"); }
+};
+
+// --- 履歴表示 ---
 async function viewHistory() {
     const list = document.getElementById('history-list');
     document.getElementById('menu').classList.add('hidden');
@@ -76,31 +117,20 @@ async function viewHistory() {
         let html = "";
         snap.forEach(doc => {
             const d = doc.data();
-            const date = d.date || "不明";
-            html += `<div style="border-bottom:1px solid #eee; padding:10px;">${date} - ${d.userId}: ${d.type === 'attendance' ? '出席(+10)' : (d.item || '交換') + '(' + d.points + ')'}</div>`;
+            html += `<div style="border-bottom:1px solid #eee; padding:10px; font-size:14px;">${d.userId}: ${d.type === 'attendance' ? '出席(+10)' : (d.item || '交換') + '(' + d.points + ')'}</div>`;
         });
         list.innerHTML = html;
-    } catch (e) { 
-        console.error(e);
-        list.innerHTML = "エラー: " + e.message; 
-    }
+    } catch (e) { list.innerHTML = "エラー: " + e.message; }
 }
 
 // --- QR処理 ---
 function initScanner() {
     if (!scanner) scanner = new Html5Qrcode("reader");
-    scanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (text) => {
-            window.stopScanner(); // 成功時もこれを使う
-            if (currentMode === 'attendance') processAttendance(text);
-            if (currentMode === 'redeem') processRedeem(text);
-        }
-    ).catch(err => {
-        console.error("カメラ起動エラー:", err);
-        addLog("カメラを起動できませんでした");
-    });
+    scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
+        window.stopScanner();
+        if (currentMode === 'attendance') processAttendance(text);
+        if (currentMode === 'redeem') processRedeem(text);
+    }).catch(() => addLog("カメラ起動失敗"));
 }
 
 // --- Firebase処理 ---
@@ -134,7 +164,6 @@ async function processRedeem(userId) {
 
 function addLog(msg) {
     const log = document.getElementById('log-container');
-    if(!log) return;
     const div = document.createElement('div');
     div.className = 'log-entry';
     div.innerText = msg;
@@ -142,15 +171,10 @@ function addLog(msg) {
     setTimeout(() => div.remove(), 5000);
 }
 
-// --- ボタンの初期設定 ---
+// --- ボタン初期設定 ---
 window.addEventListener('DOMContentLoaded', () => {
-    // メインボタン
     document.getElementById('btn-attendance').onclick = () => startProcess('attendance');
     document.getElementById('btn-items').onclick = () => showItems();
     document.getElementById('btn-history').onclick = () => viewHistory();
-    
-    // 戻るボタン系（念押しでJavaScriptからも紐付け）
-    document.getElementById('btn-qr-cancel').onclick = () => window.stopScanner();
-    document.getElementById('btn-item-back').onclick = () => window.hideSections();
-    document.getElementById('btn-history-back').onclick = () => window.hideSections();
+    document.getElementById('btn-user-admin').onclick = () => window.viewUsers();
 });
