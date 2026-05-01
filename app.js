@@ -16,98 +16,105 @@ const items = [
 ];
 
 // --- 画面操作 ---
-window.startProcess = (mode) => {
+function hideSections() {
+    document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('menu').classList.remove('hidden');
+}
+
+async function stopScanner() {
+    if (scanner) {
+        try { await scanner.stop(); } catch (e) {}
+    }
+    hideSections();
+}
+
+function startProcess(mode) {
     currentMode = mode;
     document.getElementById('menu').classList.add('hidden');
     document.getElementById('qr-section').classList.remove('hidden');
     document.getElementById('mode-title').innerText = mode === 'attendance' ? "出席QRをスキャン" : "利用者QRをスキャン";
     initScanner();
-};
+}
 
-window.showItems = () => {
+function showItems() {
     const list = document.getElementById('item-list');
     list.innerHTML = items.map(i => `
-        <div class="item-card" onclick="selectItem('${i.id}')">
+        <div class="item-card" id="item-${i.id}" style="cursor:pointer; border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px;">
             <span>${i.name}</span>
             <strong>${i.cost}pt</strong>
         </div>
     `).join('');
+    
+    items.forEach(i => {
+        const el = document.getElementById(`item-${i.id}`);
+        if(el) el.onclick = () => {
+            selectedItem = i;
+            document.getElementById('item-section').classList.add('hidden');
+            startProcess('redeem');
+        };
+    });
     document.getElementById('menu').classList.add('hidden');
     document.getElementById('item-section').classList.remove('hidden');
-};
-
-window.selectItem = (itemId) => {
-    selectedItem = items.find(i => i.id === itemId);
-    document.getElementById('item-section').classList.add('hidden');
-    startProcess('redeem');
-};
-
-window.hideSections = () => {
-    document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
-    document.getElementById('menu').classList.remove('hidden');
-};
-
-// --- QRコード処理 ---
-function initScanner() {
-    scanner = new Html5Qrcode("reader");
-    scanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (text) => {
-            stopScanner();
-            if (currentMode === 'attendance') processAttendance(text);
-            if (currentMode === 'redeem') processRedeem(text);
-        }
-    ).catch(err => addLog("カメラの起動に失敗しました"));
 }
 
-window.stopScanner = () => {
-    if (scanner) {
-        scanner.stop().then(() => {
-            hideSections();
+async function viewHistory() {
+    const list = document.getElementById('history-list');
+    document.getElementById('menu').classList.add('hidden');
+    document.getElementById('history-section').classList.remove('hidden');
+    list.innerHTML = "読み込み中...";
+    try {
+        const q = query(collection(db, "transactions"), limit(20));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+            list.innerHTML = "履歴はありません";
+            return;
+        }
+        let html = "";
+        snap.forEach(doc => {
+            const d = doc.data();
+            html += `<div style="border-bottom:1px solid #eee; padding:10px;">${d.userId}: ${d.type === 'attendance' ? '出席(+10)' : (d.item || '交換') + '(' + d.points + ')'}</div>`;
         });
-    }
-};
+        list.innerHTML = html;
+    } catch (e) { list.innerHTML = "エラー: " + e.message; }
+}
 
-// --- ポイント処理 ---
+// --- QR処理 ---
+function initScanner() {
+    if (!scanner) scanner = new Html5Qrcode("reader");
+    scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
+        stopScanner();
+        if (currentMode === 'attendance') processAttendance(text);
+        if (currentMode === 'redeem') processRedeem(text);
+    }).catch(() => addLog("カメラ起動失敗"));
+}
+
+// --- Firebase処理 ---
 async function processAttendance(userId) {
     const today = new Date().toISOString().split('T')[0];
     const userRef = doc(db, "users", userId);
-    
     try {
         const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) return addLog("エラー: 利用者が登録されていません");
-
-        const q = query(collection(db, "transactions"), 
-            where("userId", "==", userId), where("date", "==", today), where("type", "==", "attendance"));
+        if (!userSnap.exists()) return addLog("未登録の利用者です");
+        const q = query(collection(db, "transactions"), where("userId", "==", userId), where("date", "==", today), where("type", "==", "attendance"));
         const history = await getDocs(q);
-
-        if (!history.empty) return addLog("本日は既に付与済みです");
-
+        if (!history.empty) return addLog("本日は付与済みです");
         await updateDoc(userRef, { points: increment(10) });
-        await addDoc(collection(db, "transactions"), {
-            userId, type: "attendance", points: 10, date: today, timestamp: serverTimestamp()
-        });
-        addLog(`${userSnap.data().name}さんに10pt付与しました`);
-    } catch (e) { addLog("エラーが発生しました"); }
+        await addDoc(collection(db, "transactions"), { userId, type: "attendance", points: 10, date: today, timestamp: serverTimestamp() });
+        addLog("10pt付与しました！");
+    } catch (e) { addLog("通信エラー"); }
 }
 
 async function processRedeem(userId) {
     const userRef = doc(db, "users", userId);
     try {
         const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) return addLog("利用者が見つかりません");
+        if (!userSnap.exists()) return addLog("利用者不明");
         const data = userSnap.data();
-
-        if (data.points < selectedItem.cost) return addLog("ポイント不足です");
-
+        if (data.points < selectedItem.cost) return addLog("ポイント不足");
         await updateDoc(userRef, { points: increment(-selectedItem.cost) });
-        await addDoc(collection(db, "transactions"), {
-            userId, type: "redeem", item: selectedItem.name, points: -selectedItem.cost,
-            date: new Date().toISOString().split('T')[0], timestamp: serverTimestamp()
-        });
-        addLog(`${selectedItem.name}を交換しました（残:${data.points - selectedItem.cost}）`);
-    } catch (e) { addLog("通信エラー"); }
+        await addDoc(collection(db, "transactions"), { userId, type: "redeem", item: selectedItem.name, points: -selectedItem.cost, date: new Date().toISOString().split('T')[0], timestamp: serverTimestamp() });
+        addLog(selectedItem.name + "と交換しました！");
+    } catch (e) { addLog("交換失敗"); }
 }
 
 function addLog(msg) {
@@ -119,9 +126,12 @@ function addLog(msg) {
     setTimeout(() => div.remove(), 5000);
 }
 
-// ボタンと機能を紐付ける設定
-document.getElementById('btn-attendance').addEventListener('click', () => startProcess('attendance'));
-document.getElementById('btn-items').addEventListener('click', () => showItems());
-document.getElementById('btn-history').addEventListener('click', () => viewHistory());
-
-// キャンセルボタンなどにも必要なら同様に追加します
+// --- ボタンの紐付け（HTMLのIDと連動） ---
+window.addEventListener('load', () => {
+    document.getElementById('btn-attendance').onclick = () => startProcess('attendance');
+    document.getElementById('btn-items').onclick = () => showItems();
+    document.getElementById('btn-history').onclick = () => viewHistory();
+    document.getElementById('btn-qr-cancel').onclick = () => stopScanner();
+    document.getElementById('btn-item-back').onclick = () => hideSections();
+    document.getElementById('btn-history-back').onclick = () => hideSections();
+});
