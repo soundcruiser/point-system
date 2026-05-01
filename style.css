@@ -1,17 +1,16 @@
-:root {
-    --primary: #3b82f6;
-    --success: #22c55e;
-    --secondary: #64748b;
-    --danger: #ef4444;
-    --bg: #f1f5f9;
+/* 全体のリセット */
+body, h1, h2, h3, p {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 body {
-    font-family: sans-serif;
-    background: var(--bg);
-    margin: 0;
+    background-color: #f4f7f6;
+    color: #333;
     display: flex;
     justify-content: center;
+    min-height: 100vh;
 }
 
 #app {
@@ -19,20 +18,32 @@ body {
     max-width: 500px;
     background: white;
     min-height: 100vh;
-    padding: 20px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.05);
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
 }
 
-h1 { text-align: center; color: var(--secondary); font-size: 1.4rem; }
-
-/* ボタンデザイン */
-.btn-main {
-    width: 100%;
-    padding: 20px;
-    margin-bottom: 15px;
-    border: none;
-    border-radius: 15px;
+/* ヘッダー */
+header {
+    background-color: #4caf50;
     color: white;
+    padding: 20px;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+/* ナビゲーション・ボタン */
+nav {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.btn-main {
+    padding: 18px;
+    border: none;
+    border-radius: 12px;
     font-size: 1.1rem;
     font-weight: bold;
     cursor: pointer;
@@ -40,51 +51,88 @@ h1 { text-align: center; color: var(--secondary); font-size: 1.4rem; }
     align-items: center;
     justify-content: center;
     gap: 10px;
+    transition: opacity 0.2s;
+    text-decoration: none;
 }
 
-.success { background: var(--success); }
-.primary { background: var(--primary); }
-.secondary { background: var(--secondary); }
+.btn-main:active {
+    opacity: 0.7;
+}
+
+.success { background-color: #4caf50; color: white; }
+.primary { background-color: #2196f3; color: white; }
+.secondary { background-color: #607d8b; color: white; }
+.info { background-color: #00bcd4; color: white; }
 
 .btn-cancel {
-    width: 100%;
+    display: block;
+    width: calc(100% - 40px);
+    margin: 20px auto;
     padding: 15px;
-    margin-top: 15px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    background: #f8fafc;
-    color: #64748b;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
 }
 
-/* QRエリア */
+/* セクション制御 */
+section {
+    padding: 20px;
+    flex-grow: 1;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* QRリーダー */
 #reader {
-    width: 100%;
-    border-radius: 15px;
+    width: 100% !important;
+    border: none !important;
+    border-radius: 12px;
     overflow: hidden;
 }
 
-/* 履歴・商品リスト */
-.item-card, .history-card {
-    padding: 15px;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.hidden { display: none; }
-
 /* ログ通知 */
-.log-entry {
-    background: #333;
-    color: white;
-    padding: 10px;
-    margin-top: 5px;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    animation: slideIn 0.3s ease;
+#log-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    z-index: 1000;
 }
 
-@keyframes slideIn { from { opacity: 0; transform: translateY(10px); } }
+.log-entry {
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 12px;
+    border-radius: 20px;
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    animation: fadeInOut 5s forwards;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* テーブルスタイル */
+table {
+    width: 100%;
+    margin-top: 10px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 12px 8px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
