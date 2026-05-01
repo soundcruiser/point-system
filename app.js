@@ -8,6 +8,24 @@ const db = getFirestore(app);
 let scanner = null;
 let currentMode = ''; 
 let selectedItem = null;
+let audioCtx = null;
+const FEEDBACK = {
+    enabled: true,
+    success: {
+        tones: [
+            { freq: 1046, durationMs: 55, type: "triangle", volume: 0.07, delayMs: 0 },
+            { freq: 1318, durationMs: 75, type: "triangle", volume: 0.08, delayMs: 75 }
+        ],
+        vibration: [25, 35, 35]
+    },
+    error: {
+        tones: [
+            { freq: 220, durationMs: 120, type: "square", volume: 0.08, delayMs: 0 },
+            { freq: 165, durationMs: 180, type: "square", volume: 0.08, delayMs: 120 }
+        ],
+        vibration: [160]
+    }
+};
 
 const items = [
     { id: 'coffee', name: 'コーヒー', cost: 50 },
@@ -130,7 +148,7 @@ function initScanner() {
         window.stopScanner();
         if (currentMode === 'attendance') processAttendance(text);
         if (currentMode === 'redeem') processRedeem(text);
-    }).catch(() => addLog("カメラ起動失敗"));
+    }).catch(() => notify("カメラ起動失敗", "error"));
 }
 
 // --- Firebase処理 ---
@@ -139,27 +157,27 @@ async function processAttendance(userId) {
     const userRef = doc(db, "users", userId);
     try {
         const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) return addLog("未登録の利用者です");
+        if (!userSnap.exists()) return notify("未登録の利用者です", "error");
         const q = query(collection(db, "transactions"), where("userId", "==", userId), where("date", "==", today), where("type", "==", "attendance"));
         const history = await getDocs(q);
-        if (!history.empty) return addLog("本日は付与済みです");
+        if (!history.empty) return notify("本日は付与済みです", "error");
         await updateDoc(userRef, { points: increment(10) });
         await addDoc(collection(db, "transactions"), { userId, type: "attendance", points: 10, date: today, timestamp: serverTimestamp() });
-        addLog("10pt付与しました！");
-    } catch (e) { addLog("通信エラー"); }
+        notify("10pt付与しました！", "success");
+    } catch (e) { notify("通信エラー", "error"); }
 }
 
 async function processRedeem(userId) {
     const userRef = doc(db, "users", userId);
     try {
         const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) return addLog("利用者不明");
+        if (!userSnap.exists()) return notify("利用者不明", "error");
         const data = userSnap.data();
-        if (data.points < selectedItem.cost) return addLog("ポイント不足");
+        if (data.points < selectedItem.cost) return notify("ポイント不足", "error");
         await updateDoc(userRef, { points: increment(-selectedItem.cost) });
         await addDoc(collection(db, "transactions"), { userId, type: "redeem", item: selectedItem.name, points: -selectedItem.cost, date: new Date().toISOString().split('T')[0], timestamp: serverTimestamp() });
-        addLog(selectedItem.name + "と交換しました！");
-    } catch (e) { addLog("交換失敗"); }
+        notify(selectedItem.name + "と交換しました！", "success");
+    } catch (e) { notify("交換失敗", "error"); }
 }
 
 function addLog(msg) {
@@ -169,6 +187,59 @@ function addLog(msg) {
     div.innerText = msg;
     log.prepend(div);
     setTimeout(() => div.remove(), 5000);
+}
+
+function notify(msg, type = "info") {
+    addLog(msg);
+    if (!FEEDBACK.enabled) return;
+    if (type === "success") playSuccessFeedback();
+    if (type === "error") playErrorFeedback();
+}
+
+async function playTone(freq, durationMs, toneType = "sine", volume = 0.07) {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+        const oscillator = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        oscillator.type = toneType;
+        oscillator.frequency.value = freq;
+        const now = audioCtx.currentTime;
+        const attack = 0.01;
+        const release = 0.03;
+        const toneLength = Math.max(durationMs / 1000, attack + release + 0.01);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(volume, now + attack);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + toneLength);
+        oscillator.connect(gain);
+        gain.connect(audioCtx.destination);
+        oscillator.start();
+        setTimeout(() => oscillator.stop(), toneLength * 1000);
+    } catch (e) {
+        // 音声出力失敗時は無音で継続
+    }
+}
+
+function vibrate(pattern) {
+    if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function playSuccessFeedback() {
+    FEEDBACK.success.tones.forEach((tone) => {
+        setTimeout(() => {
+            playTone(tone.freq, tone.durationMs, tone.type, tone.volume);
+        }, tone.delayMs);
+    });
+    vibrate(FEEDBACK.success.vibration);
+}
+
+function playErrorFeedback() {
+    FEEDBACK.error.tones.forEach((tone) => {
+        setTimeout(() => {
+            playTone(tone.freq, tone.durationMs, tone.type, tone.volume);
+        }, tone.delayMs);
+    });
+    vibrate(FEEDBACK.error.vibration);
 }
 
 // --- ボタン初期設定 ---
