@@ -15,23 +15,22 @@ const items = [
     { id: 'nikuman', name: '肉まん', cost: 100 }
 ];
 
-// --- 画面操作 ---
-function hideSections() {
+// --- 画面操作（windowに登録してHTMLのonclickから呼べるようにする） ---
+window.hideSections = function() {
+    console.log("全セクション非表示");
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
     document.getElementById('menu').classList.remove('hidden');
-}
-
-async function stopScanner() {
-    if (scanner && scanner.isScanning) { // スキャン中のみ止める
-        try { 
-            await scanner.stop(); 
-        } catch (e) {
-            console.error("Stop error:", e);
-        }
+    
+    // カメラが動いていれば、画面遷移の邪魔をしないよう「後回し」で止める
+    if (scanner && scanner.isScanning) {
+        scanner.stop().catch(() => {});
     }
-    // スキャナーの状態に関わらず、必ず画面は閉じる
-    hideSections();
-}
+};
+
+window.stopScanner = function() {
+    console.log("キャンセル実行");
+    window.hideSections();
+};
 
 function startProcess(mode) {
     currentMode = mode;
@@ -44,7 +43,7 @@ function startProcess(mode) {
 function showItems() {
     const list = document.getElementById('item-list');
     list.innerHTML = items.map(i => `
-        <div class="item-card" id="item-${i.id}" style="cursor:pointer; border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px;">
+        <div class="item-card" id="item-${i.id}" style="cursor:pointer; border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px; background:#fff;">
             <span>${i.name}</span>
             <strong>${i.cost}pt</strong>
         </div>
@@ -77,20 +76,31 @@ async function viewHistory() {
         let html = "";
         snap.forEach(doc => {
             const d = doc.data();
-            html += `<div style="border-bottom:1px solid #eee; padding:10px;">${d.userId}: ${d.type === 'attendance' ? '出席(+10)' : (d.item || '交換') + '(' + d.points + ')'}</div>`;
+            const date = d.date || "不明";
+            html += `<div style="border-bottom:1px solid #eee; padding:10px;">${date} - ${d.userId}: ${d.type === 'attendance' ? '出席(+10)' : (d.item || '交換') + '(' + d.points + ')'}</div>`;
         });
         list.innerHTML = html;
-    } catch (e) { list.innerHTML = "エラー: " + e.message; }
+    } catch (e) { 
+        console.error(e);
+        list.innerHTML = "エラー: " + e.message; 
+    }
 }
 
 // --- QR処理 ---
 function initScanner() {
     if (!scanner) scanner = new Html5Qrcode("reader");
-    scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
-        stopScanner();
-        if (currentMode === 'attendance') processAttendance(text);
-        if (currentMode === 'redeem') processRedeem(text);
-    }).catch(() => addLog("カメラ起動失敗"));
+    scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (text) => {
+            window.stopScanner(); // 成功時もこれを使う
+            if (currentMode === 'attendance') processAttendance(text);
+            if (currentMode === 'redeem') processRedeem(text);
+        }
+    ).catch(err => {
+        console.error("カメラ起動エラー:", err);
+        addLog("カメラを起動できませんでした");
+    });
 }
 
 // --- Firebase処理 ---
@@ -124,6 +134,7 @@ async function processRedeem(userId) {
 
 function addLog(msg) {
     const log = document.getElementById('log-container');
+    if(!log) return;
     const div = document.createElement('div');
     div.className = 'log-entry';
     div.innerText = msg;
@@ -131,12 +142,15 @@ function addLog(msg) {
     setTimeout(() => div.remove(), 5000);
 }
 
-// --- ボタンの紐付け（HTMLのIDと連動） ---
-window.addEventListener('load', () => {
+// --- ボタンの初期設定 ---
+window.addEventListener('DOMContentLoaded', () => {
+    // メインボタン
     document.getElementById('btn-attendance').onclick = () => startProcess('attendance');
     document.getElementById('btn-items').onclick = () => showItems();
     document.getElementById('btn-history').onclick = () => viewHistory();
-    document.getElementById('btn-qr-cancel').onclick = () => stopScanner();
-    document.getElementById('btn-item-back').onclick = () => hideSections();
-    document.getElementById('btn-history-back').onclick = () => hideSections();
+    
+    // 戻るボタン系（念押しでJavaScriptからも紐付け）
+    document.getElementById('btn-qr-cancel').onclick = () => window.stopScanner();
+    document.getElementById('btn-item-back').onclick = () => window.hideSections();
+    document.getElementById('btn-history-back').onclick = () => window.hideSections();
 });
