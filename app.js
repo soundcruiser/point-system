@@ -22,9 +22,14 @@ function hideSections() {
 }
 
 async function stopScanner() {
-    if (scanner) {
-        try { await scanner.stop(); } catch (e) {}
+    if (scanner && scanner.isScanning) { // スキャン中のみ止める
+        try { 
+            await scanner.stop(); 
+        } catch (e) {
+            console.error("Stop error:", e);
+        }
     }
+    // スキャナーの状態に関わらず、必ず画面は閉じる
     hideSections();
 }
 
