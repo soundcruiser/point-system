@@ -11,53 +11,62 @@
     <div id="app">
         <header>
             <h1>ポイント管理システム</h1>
-            <div id="user-info-bar" class="hidden"></div>
         </header>
 
         <!-- メインメニュー -->
         <nav id="menu">
-            <!-- idを追加し、onclickを削除しました -->
             <button id="btn-attendance" class="btn-main success">
                 <span class="icon">📅</span> 出席登録 (+10pt)
             </button>
             <button id="btn-items" class="btn-main primary">
                 <span class="icon">🎁</span> 商品交換
             </button>
+            <button id="btn-user-admin" class="btn-main secondary">
+                <span class="icon">👥</span> 利用者一覧・登録
+            </button>
             <button id="btn-history" class="btn-main secondary">
                 <span class="icon">📜</span> 全履歴を確認
             </button>
-            <button id="btn-user-admin" class="btn-main info">
-                <span class="icon">👥</span> 利用者一覧・登録
-            </button>
         </nav>
 
-<!-- QRリーダー画面 -->
-<section id="qr-section" class="hidden">
-    <div class="section-header"><h2 id="mode-title">スキャン中...</h2></div>
-    <div id="reader"></div>
-    <!-- onclickを復活させ、中身を window.stopScanner() にします -->
-    <button class="btn-cancel" onclick="window.stopScanner()">キャンセルして戻る</button>
-</section>
+        <!-- QRリーダー画面 -->
+        <section id="qr-section" class="hidden">
+            <div class="section-header"><h2 id="mode-title">スキャン中...</h2></div>
+            <div id="reader"></div>
+            <button id="btn-qr-cancel" class="btn-cancel" onclick="window.stopScanner()">キャンセルして戻る</button>
+        </section>
 
-<!-- 商品選択画面 -->
-<section id="item-section" class="hidden">
-    <h2>商品を選んでください</h2>
-    <div id="item-list"></div>
-    <button class="btn-cancel" onclick="window.hideSections()">戻る</button>
-</section>
+        <!-- 商品選択画面 -->
+        <section id="item-section" class="hidden">
+            <h2>商品を選んでください</h2>
+            <div id="item-list"></div>
+            <button id="btn-item-back" class="btn-cancel" onclick="window.hideSections()">戻る</button>
+        </section>
 
-<!-- 履歴表示画面 -->
-<section id="history-section" class="hidden">
-    <h2>最近の履歴</h2>
-    <div id="history-list"></div>
-    <button class="btn-cancel" onclick="window.hideSections()">戻る</button>
-</section>
+        <!-- 利用者管理画面 -->
+        <section id="user-admin-section" class="hidden">
+            <h2>利用者管理</h2>
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
+                <h3>新規ユーザー登録</h3>
+                <input type="text" id="new-user-id" placeholder="ID (例: USER001)" style="width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box;">
+                <input type="text" id="new-user-name" placeholder="お名前" style="width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box;">
+                <button onclick="window.addUser()" class="btn-main success" style="width: 100%;">登録する</button>
+            </div>
+            <div id="user-list"></div>
+            <button id="btn-user-back" class="btn-cancel" onclick="window.hideSections()">戻る</button>
+        </section>
+
+        <!-- 履歴表示画面 -->
+        <section id="history-section" class="hidden">
+            <h2>最近の履歴</h2>
+            <div id="history-list"></div>
+            <button id="btn-history-back" class="btn-cancel" onclick="window.hideSections()">戻る</button>
+        </section>
 
         <!-- 通知ログ -->
         <div id="log-container"></div>
     </div>
 
-    <!-- Firebase関係の処理 -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
