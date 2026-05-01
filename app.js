@@ -9,6 +9,7 @@ let scanner = null;
 let currentMode = ''; 
 let selectedItem = null;
 let audioCtx = null;
+let audioUnlocked = false;
 const FEEDBACK = {
     enabled: true,
     success: {
@@ -47,6 +48,7 @@ window.stopScanner = function() {
 };
 
 function startProcess(mode) {
+    unlockAudio();
     currentMode = mode;
     document.getElementById('menu').classList.add('hidden');
     document.getElementById('qr-section').classList.remove('hidden');
@@ -66,6 +68,7 @@ function showItems() {
     items.forEach(i => {
         const el = document.getElementById(`item-${i.id}`);
         if(el) el.onclick = () => {
+            unlockAudio();
             selectedItem = i;
             document.getElementById('item-section').classList.add('hidden');
             startProcess('redeem');
@@ -196,15 +199,40 @@ function notify(msg, type = "info") {
     if (type === "error") playErrorFeedback();
 }
 
+function getAudioContext() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+}
+
+async function unlockAudio() {
+    if (!FEEDBACK.enabled || audioUnlocked) return true;
+    try {
+        const ctx = getAudioContext();
+        if (ctx.state === "suspended") await ctx.resume();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.0001;
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        oscillator.start();
+        oscillator.stop(ctx.currentTime + 0.01);
+        audioUnlocked = true;
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 async function playTone(freq, durationMs, toneType = "sine", volume = 0.07) {
     try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === "suspended") await audioCtx.resume();
-        const oscillator = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        await unlockAudio();
+        const ctx = getAudioContext();
+        if (ctx.state === "suspended") await ctx.resume();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
         oscillator.type = toneType;
         oscillator.frequency.value = freq;
-        const now = audioCtx.currentTime;
+        const now = ctx.currentTime;
         const attack = 0.01;
         const release = 0.03;
         const toneLength = Math.max(durationMs / 1000, attack + release + 0.01);
@@ -212,7 +240,7 @@ async function playTone(freq, durationMs, toneType = "sine", volume = 0.07) {
         gain.gain.exponentialRampToValueAtTime(volume, now + attack);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + toneLength);
         oscillator.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         oscillator.start();
         setTimeout(() => oscillator.stop(), toneLength * 1000);
     } catch (e) {
@@ -244,6 +272,9 @@ function playErrorFeedback() {
 
 // --- ボタン初期設定 ---
 window.addEventListener('DOMContentLoaded', () => {
+    ['touchstart', 'pointerdown', 'keydown'].forEach((eventName) => {
+        window.addEventListener(eventName, unlockAudio, { once: true, passive: true });
+    });
     document.getElementById('btn-attendance').onclick = () => startProcess('attendance');
     document.getElementById('btn-items').onclick = () => showItems();
     document.getElementById('btn-history').onclick = () => viewHistory();
