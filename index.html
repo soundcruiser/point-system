@@ -28,28 +28,27 @@
             </button>
         </nav>
 
-        <!-- QRリーダー画面 -->
-        <section id="qr-section" class="hidden">
-            <div class="section-header">
-                <h2 id="mode-title">スキャン中...</h2>
-            </div>
-            <div id="reader"></div>
-            <button class="btn-cancel" onclick="stopScanner()">キャンセルして戻る</button>
-        </section>
+<!-- QRリーダー画面 -->
+<section id="qr-section" class="hidden">
+    <div class="section-header"><h2 id="mode-title">スキャン中...</h2></div>
+    <div id="reader"></div>
+    <!-- onclickを復活させ、中身を window.stopScanner() にします -->
+    <button class="btn-cancel" onclick="window.stopScanner()">キャンセルして戻る</button>
+</section>
 
-        <!-- 商品選択画面 -->
-        <section id="item-section" class="hidden">
-            <h2>商品を選んでください</h2>
-            <div id="item-list"></div>
-            <button class="btn-cancel" onclick="hideSections()">戻る</button>
-        </section>
+<!-- 商品選択画面 -->
+<section id="item-section" class="hidden">
+    <h2>商品を選んでください</h2>
+    <div id="item-list"></div>
+    <button class="btn-cancel" onclick="window.hideSections()">戻る</button>
+</section>
 
-        <!-- 履歴表示画面 -->
-        <section id="history-section" class="hidden">
-            <h2>最近の履歴</h2>
-            <div id="history-list"></div>
-            <button class="btn-cancel" onclick="hideSections()">戻る</button>
-        </section>
+<!-- 履歴表示画面 -->
+<section id="history-section" class="hidden">
+    <h2>最近の履歴</h2>
+    <div id="history-list"></div>
+    <button class="btn-cancel" onclick="window.hideSections()">戻る</button>
+</section>
 
         <!-- 通知ログ -->
         <div id="log-container"></div>
