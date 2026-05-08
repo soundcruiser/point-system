@@ -27,18 +27,31 @@
 
         <!-- メインメニュー -->
         <nav id="menu">
-            <button id="btn-attendance" class="btn-main success">
-                <span class="icon">📅</span> 出席登録 (+10pt)
-            </button>
-            <button id="btn-items" class="btn-main primary">
-                <span class="icon">🎁</span> 商品交換
-            </button>
-            <button id="btn-user-admin" class="btn-main secondary">
-                <span class="icon">👥</span> 利用者一覧・登録
-            </button>
-            <button id="btn-history" class="btn-main secondary">
-                <span class="icon">📜</span> 全履歴を確認
-            </button>
+            <div class="menu-group menu-group-attendance">
+                <h2 class="menu-group-title">出席登録</h2>
+                <p class="menu-group-desc">本日1回限り、出席スキャンで <strong>+10pt</strong> を付与します。</p>
+                <button id="btn-attendance" type="button" class="btn-main success">
+                    <span class="icon">📅</span> 出席QRをスキャン
+                </button>
+            </div>
+
+            <div class="menu-group menu-group-redeem">
+                <h2 class="menu-group-title">商品の交換（購入）</h2>
+                <p class="menu-group-desc">商品を選んでから利用者QRを読み取り、<strong>所持ポイント</strong>で交換します。</p>
+                <button id="btn-items" type="button" class="btn-main primary">
+                    <span class="icon">🎁</span> 商品一覧から選ぶ
+                </button>
+            </div>
+
+            <div class="menu-group menu-group-admin">
+                <h2 class="menu-group-title">管理・履歴</h2>
+                <button id="btn-user-admin" type="button" class="btn-main secondary">
+                    <span class="icon">👥</span> 利用者一覧・登録
+                </button>
+                <button id="btn-history" type="button" class="btn-main secondary">
+                    <span class="icon">📜</span> 全履歴を確認
+                </button>
+            </div>
         </nav>
 
         <!-- QRリーダー画面 -->
@@ -50,7 +63,10 @@
 
         <!-- 商品選択画面 -->
         <section id="item-section" class="hidden">
-            <h2>商品を選んでください</h2>
+            <div class="section-intro">
+                <h2>商品を選んでください</h2>
+                <p class="section-hint">QRスキャン後にその方の<strong>所持ポイント</strong>と照合し、足りれば交換できます。</p>
+            </div>
             <div id="item-list"></div>
             <button id="btn-item-back" class="btn-cancel" onclick="window.hideSections()">戻る</button>
         </section>
