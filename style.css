@@ -151,25 +151,6 @@ nav {
     letter-spacing: 0.04em;
 }
 
-.user-stats {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 16px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
-    background: #fff8e1;
-    border: 1px solid #ffe082;
-    border-radius: 12px;
-    font-size: 0.9rem;
-    color: #5d4037;
-}
-
-.user-stats strong {
-    font-size: 1.05rem;
-    color: #e65100;
-}
-
 .points-badge {
     display: inline-block;
     min-width: 3.5em;
@@ -181,6 +162,163 @@ nav {
     color: #0d47a1;
     border-radius: 8px;
     font-size: 0.95rem;
+}
+
+.points-badge-large {
+    font-size: 1.25rem;
+    padding: 10px 16px;
+}
+
+.user-history-header {
+    margin-bottom: 18px;
+}
+
+.user-history-heading {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1b5e20;
+    margin-bottom: 12px;
+    line-height: 1.35;
+}
+
+.user-history-id {
+    font-weight: 600;
+    color: #546e7a;
+    font-size: 0.95em;
+}
+
+.user-history-balance-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    border-radius: 12px;
+}
+
+.user-history-balance-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2e7d32;
+}
+
+.history-empty-msg {
+    color: #757575;
+    font-size: 0.95rem;
+    margin-top: 8px;
+}
+
+.history-panels {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.history-panel {
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    border: 2px solid #e0e0e0;
+    background: #fff;
+}
+
+.history-panel-attendance {
+    border-color: #81c784;
+    background: linear-gradient(180deg, #f1f8f4 0%, #fff 48px);
+}
+
+.history-panel-redeem {
+    border-color: #64b5f6;
+    background: linear-gradient(180deg, #f5f9ff 0%, #fff 48px);
+}
+
+.history-panel-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: #263238;
+    letter-spacing: 0.02em;
+}
+
+.history-panel-empty {
+    font-size: 0.88rem;
+    color: #78909c;
+    margin: 0 0 12px;
+    padding: 8px 0;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin-bottom: 12px;
+}
+
+.history-table th,
+.history-table td {
+    padding: 8px 6px;
+    text-align: left;
+    border-bottom: 1px solid #eceff1;
+}
+
+.history-table th {
+    background: rgba(0, 0, 0, 0.04);
+    font-weight: 600;
+    color: #455a64;
+}
+
+.history-table td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.history-pts-cell {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.history-pts-plus {
+    color: #2e7d32;
+}
+
+.history-pts-minus {
+    color: #c62828;
+}
+
+.history-panel-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+    padding-top: 10px;
+    margin-top: 4px;
+    border-top: 1px dashed #cfd8dc;
+    font-size: 0.88rem;
+}
+
+.history-summary-label {
+    color: #546e7a;
+    font-weight: 600;
+}
+
+.history-summary-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.history-summary-plus {
+    color: #1b5e20;
+}
+
+.history-summary-minus {
+    color: #b71c1c;
+}
+
+.history-summary-count {
+    color: #90a4ae;
+    font-size: 0.85rem;
 }
 
 .btn-main {
