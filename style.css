@@ -300,6 +300,83 @@ nav {
     box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px #2196f3;
 }
 
+.history-month-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+}
+
+.history-month-nav-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid #bdbdbd;
+    border-radius: 10px;
+    background: #fff;
+    color: #37474f;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+
+.history-month-nav-btn:hover:not(:disabled) {
+    background: #f5f5f5;
+}
+
+.history-month-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.history-month-pager-meta {
+    flex: 1 1 100%;
+    order: -1;
+    text-align: center;
+}
+
+@media (min-width: 400px) {
+    .history-month-pager-meta {
+        flex: 0 1 auto;
+        order: 0;
+        min-width: 8rem;
+    }
+}
+
+.history-month-pager-label {
+    display: block;
+    font-weight: 800;
+    font-size: 1rem;
+    color: #263238;
+}
+
+.history-month-pager-count {
+    display: block;
+    font-size: 0.8rem;
+    color: #78909c;
+    margin-top: 2px;
+}
+
+.history-month-page {
+    min-height: 2rem;
+}
+
+.history-month-block--page {
+    margin-bottom: 0;
+}
+
+.history-panel-redeem .history-month-pager {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: #bbdefb;
+}
+
 .history-month-stack {
     display: flex;
     flex-direction: column;
