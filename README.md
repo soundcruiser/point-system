@@ -22,7 +22,7 @@
 
 - **フロントエンド:** HTML, CSS, Vanilla JavaScript
 - **バックエンド (データベース):** Firebase Firestore
-- **機能:** 
+- **機能:**
   - `html5-qrcode` を利用したカメラでのQRコード読み取り機能
   - スマートフォンでネイティブアプリのように使えるPWA (Progressive Web App) 対応
 
