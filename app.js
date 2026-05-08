@@ -60,9 +60,12 @@ function startProcess(mode) {
 function showItems() {
   const list = document.getElementById('item-list');
   list.innerHTML = items.map(i => `
-    <div class="item-card" id="item-${i.id}" style="cursor:pointer; border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px; background:#fff;">
-      <span>${i.name}</span>
-      <strong>${i.cost}pt</strong>
+    <div class="item-card" id="item-${i.id}">
+      <span class="item-card-name">${i.name}</span>
+      <div class="item-card-meta">
+        <span class="item-card-cost-label">必要ポイント</span>
+        <span class="item-card-cost">${i.cost}pt</span>
+      </div>
     </div>
   `).join('');
 
@@ -93,18 +96,23 @@ window.viewUsers = async function() {
       return;
     }
 
-    // テーブルに「履歴」列を追加
-    let html = "<table style='width:100%; border-collapse: collapse; font-size: 14px;'>";
-    html += "<tr style='background:#eee;'><th>ID</th><th>名前</th><th>pt</th><th>履歴</th></tr>";
+    let totalPoints = 0;
+    snap.forEach((d) => {
+      totalPoints += Number(d.data().points) || 0;
+    });
+
+    let html = `<div class="user-stats">登録 <strong>${snap.size}</strong> 名 ・ 所持ポイント合計 <strong>${totalPoints}pt</strong></div>`;
+    html += "<table style='width:100%; border-collapse: collapse; font-size: 14px;'>";
+    html += "<tr style='background:#eee;'><th>ID</th><th>名前</th><th>所持ポイント</th><th>履歴</th></tr>";
 
     snap.forEach(doc => {
       const u = doc.data();
+      const pts = Number(u.points) || 0;
       html += `<tr style='border-bottom:1px solid #ddd;'>
         <td style='padding:8px;'>${doc.id}</td>
         <td style='padding:8px;'>${u.name || '---'}</td>
-        <td style='padding:8px; text-align:right;'>${u.points}pt</td>
+        <td style='padding:8px; text-align:center;'><span class="points-badge">${pts}pt</span></td>
         <td style='padding:8px; text-align:center;'>
-          <!-- 個別履歴を表示するボタン -->
           <button onclick="window.viewUserHistory('${doc.id}')" style="padding:4px 8px; border:none; background:#4caf50; color:white; border-radius:4px; cursor:pointer;">表示</button>
         </td>
       </tr>`;
@@ -237,8 +245,10 @@ async function processAttendance(userId) {
 
     await updateDoc(userRef, { points: increment(10) });
     await addDoc(collection(db, "transactions"), { userId, type: "attendance", points: 10, date: today, timestamp: serverTimestamp() });
-    
-    notify("10pt付与しました！", "success");
+
+    const afterSnap = await getDoc(userRef);
+    const balance = afterSnap.exists() ? Number(afterSnap.data().points) || 0 : 0;
+    notify(`10pt付与しました。所持ポイント ${balance}pt`, "success");
   } catch (e) { notify("通信エラー", "error"); }
 }
 
@@ -250,12 +260,16 @@ async function processRedeem(userId) {
     if (!userSnap.exists()) return notify("利用者不明", "error");
 
     const data = userSnap.data();
-    if (data.points < selectedItem.cost) return notify("ポイント不足", "error");
+    if (data.points < selectedItem.cost) {
+      return notify(`ポイント不足（所持 ${data.points}pt · 必要 ${selectedItem.cost}pt）`, "error");
+    }
 
     await updateDoc(userRef, { points: increment(-selectedItem.cost) });
     await addDoc(collection(db, "transactions"), { userId, type: "redeem", item: selectedItem.name, points: -selectedItem.cost, date: new Date().toISOString().split('T'), timestamp: serverTimestamp() });
-    
-    notify(selectedItem.name + "と交換しました！", "success");
+
+    const afterSnap = await getDoc(userRef);
+    const balance = afterSnap.exists() ? Number(afterSnap.data().points) || 0 : 0;
+    notify(`${selectedItem.name}と交換しました。残り ${balance}pt`, "success");
   } catch (e) { notify("交換失敗", "error"); }
 }
 
