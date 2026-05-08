@@ -35,6 +35,33 @@ const items = [
   { id: 'nikuman', name: '肉まん', cost: 100 }
 ];
 
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function transactionTimestampMs(d) {
+  if (d.timestamp && typeof d.timestamp.toMillis === "function") return d.timestamp.toMillis();
+  if (d.timestamp && typeof d.timestamp.seconds === "number") return d.timestamp.seconds * 1000;
+  return 0;
+}
+
+function formatTransactionDate(d) {
+  try {
+    let dateObj;
+    if (d.timestamp && d.timestamp.toDate) dateObj = d.timestamp.toDate();
+    else if (Array.isArray(d.date)) dateObj = new Date(d.date[0]);
+    else if (d.date) dateObj = new Date(d.date);
+    else dateObj = new Date(0);
+    return dateObj.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "—";
+  }
+}
+
 // --- 画面操作 ---
 window.hideSections = function() {
   document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
@@ -96,13 +123,7 @@ window.viewUsers = async function() {
       return;
     }
 
-    let totalPoints = 0;
-    snap.forEach((d) => {
-      totalPoints += Number(d.data().points) || 0;
-    });
-
-    let html = `<div class="user-stats">登録 <strong>${snap.size}</strong> 名 ・ 所持ポイント合計 <strong>${totalPoints}pt</strong></div>`;
-    html += "<table style='width:100%; border-collapse: collapse; font-size: 14px;'>";
+    let html = "<table style='width:100%; border-collapse: collapse; font-size: 14px;'>";
     html += "<tr style='background:#eee;'><th>ID</th><th>名前</th><th>所持ポイント</th><th>履歴</th></tr>";
 
     snap.forEach(doc => {
@@ -143,53 +164,103 @@ window.addUser = async function() {
 // --- 個別履歴表示機能 ---
 window.viewUserHistory = async function(userId) {
   const list = document.getElementById('history-list');
-  
-  // 画面を履歴セクションに切り替え
+
   document.getElementById('user-admin-section').classList.add('hidden');
   document.getElementById('history-section').classList.remove('hidden');
-  
+
   list.innerHTML = "読み込み中...";
 
   try {
-    // 特定のユーザーIDに一致する履歴だけを取得
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    const userName = userSnap.exists() ? (userSnap.data().name || "") : "";
+    const currentBalance = userSnap.exists() ? Number(userSnap.data().points) || 0 : 0;
+
+    const safeId = escapeHtml(userId);
+    const titleHtml = userName
+      ? `${escapeHtml(userName)}<span class="user-history-id">（${safeId}）</span>`
+      : safeId;
+
+    const balanceBlock = `
+      <div class="user-history-balance-card">
+        <span class="user-history-balance-label">現在の所持ポイント</span>
+        <span class="points-badge points-badge-large">${currentBalance}pt</span>
+      </div>`;
+
+    const headerHtml = `
+      <div class="user-history-header">
+        <h3 class="user-history-heading">${titleHtml}</h3>
+        ${balanceBlock}
+      </div>`;
+
     const q = query(collection(db, "transactions"), where("userId", "==", userId));
     const snap = await getDocs(q);
 
     if (snap.empty) {
-      list.innerHTML = `<p>${userId} の履歴はありません</p>`;
+      list.innerHTML = `${headerHtml}<p class="history-empty-msg">トランザクション履歴はありません</p>`;
       return;
     }
 
-    // 取得したデータを配列に入れ、時間（timestamp）の降順（新しい順）に並び替え
     let historyData = [];
-    snap.forEach(doc => historyData.push(doc.data()));
-    historyData.sort((a, b) => b.timestamp - a.timestamp);
+    snap.forEach((docSnap) => historyData.push(docSnap.data()));
+    historyData.sort((a, b) => transactionTimestampMs(b) - transactionTimestampMs(a));
 
-    let html = `<h3 style="margin-bottom: 10px; color: #4caf50;">${userId} の履歴</h3>`;
-    html += "<table style='width:100%; border-collapse: collapse; font-size: 14px;'>";
-    html += "<tr style='background:#eee;'><th>日時</th><th>内容</th></tr>";
+    const attendanceRows = historyData.filter((d) => d.type === "attendance");
+    const redeemRows = historyData.filter((d) => d.type === "redeem");
 
-    historyData.forEach(d => {
-      // タイムスタンプを「〇/〇 HH:MM」の形式に変換
-      const dateObj = d.timestamp ? d.timestamp.toDate() : new Date(d.date);
-      const dateStr = dateObj.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      
-      // 出席と商品交換で表示を変える
-      const actionStr = d.type === 'attendance' 
-        ? '<span style="color:green; font-weight:bold;">出席 (+10pt)</span>' 
-        : `<span style="color:red;">${d.item} (${d.points}pt)</span>`;
+    const attendanceTotal = attendanceRows.reduce((s, d) => s + (Number(d.points) || 0), 0);
+    const redeemSpentTotal = redeemRows.reduce((s, d) => s + Math.abs(Number(d.points) || 0), 0);
 
-      html += `<tr style='border-bottom:1px solid #ddd;'>
-        <td style='padding:8px;'>${dateStr}</td>
-        <td style='padding:8px;'>${actionStr}</td>
-      </tr>`;
-    });
-    
-    html += "</table>";
+    let attendanceBody = "";
+    if (attendanceRows.length === 0) {
+      attendanceBody = '<p class="history-panel-empty">まだ出席の記録がありません</p>';
+    } else {
+      attendanceBody = "<table class='history-table'><thead><tr><th>日時</th><th>獲得</th></tr></thead><tbody>";
+      attendanceRows.forEach((d) => {
+        const pts = Number(d.points) || 0;
+        attendanceBody += `<tr><td>${formatTransactionDate(d)}</td><td class="history-pts-cell history-pts-plus">+${pts}pt</td></tr>`;
+      });
+      attendanceBody += "</tbody></table>";
+    }
+
+    let redeemBody = "";
+    if (redeemRows.length === 0) {
+      redeemBody = '<p class="history-panel-empty">まだ商品交換の記録がありません</p>';
+    } else {
+      redeemBody = "<table class='history-table'><thead><tr><th>日時</th><th>商品</th><th>使用</th></tr></thead><tbody>";
+      redeemRows.forEach((d) => {
+        const spent = Math.abs(Number(d.points) || 0);
+        const itemLabel = escapeHtml(d.item || "交換");
+        redeemBody += `<tr><td>${formatTransactionDate(d)}</td><td>${itemLabel}</td><td class="history-pts-cell history-pts-minus">-${spent}pt</td></tr>`;
+      });
+      redeemBody += "</tbody></table>";
+    }
+
+    const html = `${headerHtml}
+      <div class="history-panels">
+        <div class="history-panel history-panel-attendance">
+          <h4 class="history-panel-title">出席履歴</h4>
+          ${attendanceBody}
+          <div class="history-panel-summary">
+            <span class="history-summary-label">出席での獲得合計</span>
+            <span class="history-summary-value history-summary-plus">+${attendanceTotal}pt</span>
+            <span class="history-summary-count">（${attendanceRows.length}回）</span>
+          </div>
+        </div>
+        <div class="history-panel history-panel-redeem">
+          <h4 class="history-panel-title">商品交換履歴</h4>
+          ${redeemBody}
+          <div class="history-panel-summary">
+            <span class="history-summary-label">交換で使用したポイント合計</span>
+            <span class="history-summary-value history-summary-minus">-${redeemSpentTotal}pt</span>
+            <span class="history-summary-count">（${redeemRows.length}回）</span>
+          </div>
+        </div>
+      </div>`;
+
     list.innerHTML = html;
-
-  } catch (e) { 
-    list.innerHTML = "エラー: " + e.message; 
+  } catch (e) {
+    list.innerHTML = "エラー: " + e.message;
   }
 };
 
