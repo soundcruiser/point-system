@@ -210,6 +210,43 @@ nav {
     margin-top: 8px;
 }
 
+.history-month-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.history-month-block {
+    border-radius: 10px;
+    padding: 12px 12px 10px;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.history-month-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 10px;
+    color: #37474f;
+}
+
+.history-month-foot {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #cfd8dc;
+}
+
+.history-month-line {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: #455a64;
+    margin: 0 0 6px;
+}
+
+.history-month-line:last-child {
+    margin-bottom: 0;
+}
+
 .history-panels {
     display: flex;
     flex-direction: column;
