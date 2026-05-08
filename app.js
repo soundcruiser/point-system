@@ -89,6 +89,48 @@ function groupTransactionsByYearMonth(rows) {
   });
 }
 
+function attendanceDateKeyLocal(d) {
+  const dt = transactionDate(d);
+  if (!dt.getTime()) return null;
+  const y = dt.getFullYear();
+  const m = dt.getMonth() + 1;
+  const day = dt.getDate();
+  return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function isTodayCalendarDay(year, month, day) {
+  const t = new Date();
+  return t.getFullYear() === year && t.getMonth() + 1 === month && t.getDate() === day;
+}
+
+function renderAttendanceCalendar(year, month, dayKeys) {
+  const weekdayLabels = ["月", "火", "水", "木", "金", "土", "日"];
+  let html = `<div class="attendance-cal" role="grid" aria-label="${year}年${month}月の出席カレンダー">`;
+  html += '<div class="attendance-cal-weekdays">';
+  for (const w of weekdayLabels) html += `<span>${w}</span>`;
+  html += '</div><div class="attendance-cal-grid">';
+
+  const first = new Date(year, month - 1, 1);
+  const startPad = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  for (let i = 0; i < startPad; i++) {
+    html += '<span class="cal-cell cal-cell--pad" aria-hidden="true"></span>';
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const key = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const attended = dayKeys.has(key);
+    const today = isTodayCalendarDay(year, month, day);
+    const classes = ["cal-cell", "cal-day"];
+    if (attended) classes.push("cal-day--attended");
+    if (today) classes.push("cal-day--today");
+    const title = attended ? "出席あり" : today ? "今日" : "";
+    html += `<span class="${classes.join(" ")}" ${title ? `title="${title}"` : ""}>${day}</span>`;
+  }
+  html += "</div></div>";
+  return html;
+}
+
 // --- 画面操作 ---
 window.hideSections = function() {
   document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
@@ -239,13 +281,21 @@ window.viewUserHistory = async function(userId) {
     if (attendanceRows.length === 0) {
       attendanceBody = '<p class="history-panel-empty">まだ出席の記録がありません</p>';
     } else {
-      attendanceBody = '<div class="history-month-stack">';
+      attendanceBody =
+        '<p class="attendance-cal-legend attendance-cal-legend--panel"><span class="cal-legend-swatch" aria-hidden="true"></span> <strong>緑</strong>の日が出席記録があります（<span class="cal-legend-today">枠</span>は今日）</p>';
+      attendanceBody += '<div class="history-month-stack">';
       for (const g of groupTransactionsByYearMonth(attendanceRows)) {
         const label = `${g.year}年${g.month}月`;
         const n = g.items.length;
         const monthTotal = g.items.reduce((s, d) => s + (Number(d.points) || 0), 0);
+        const monthDayKeys = new Set();
+        for (const row of g.items) {
+          const k = attendanceDateKeyLocal(row);
+          if (k) monthDayKeys.add(k);
+        }
         attendanceBody += `<div class="history-month-block">`;
         attendanceBody += `<h5 class="history-month-title">${label}</h5>`;
+        attendanceBody += renderAttendanceCalendar(g.year, g.month, monthDayKeys);
         attendanceBody += "<table class='history-table'><thead><tr><th>日時</th><th>獲得</th></tr></thead><tbody>";
         for (const d of g.items) {
           const pts = Number(d.points) || 0;
