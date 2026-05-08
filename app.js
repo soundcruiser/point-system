@@ -131,6 +131,120 @@ function renderAttendanceCalendar(year, month, dayKeys) {
   return html;
 }
 
+function buildAttendanceMonthPageHtml(g) {
+  const label = `${g.year}年${g.month}月`;
+  const n = g.items.length;
+  const monthTotal = g.items.reduce((s, d) => s + (Number(d.points) || 0), 0);
+  const monthDayKeys = new Set();
+  for (const row of g.items) {
+    const k = attendanceDateKeyLocal(row);
+    if (k) monthDayKeys.add(k);
+  }
+  let html = `<div class="history-month-block history-month-block--page">`;
+  html += `<h5 class="history-month-title">${label}</h5>`;
+  html += renderAttendanceCalendar(g.year, g.month, monthDayKeys);
+  html += "<table class='history-table'><thead><tr><th>日時</th><th>獲得</th></tr></thead><tbody>";
+  for (const d of g.items) {
+    const pts = Number(d.points) || 0;
+    html += `<tr><td>${formatTransactionDate(d)}</td><td class="history-pts-cell history-pts-plus">+${pts}pt</td></tr>`;
+  }
+  html += "</tbody></table>";
+  html += `<div class="history-month-foot">`;
+  html += `<p class="history-month-line">${label}の出席回数は<strong>${n}回</strong>です。</p>`;
+  html += `<p class="history-month-line">獲得合計は<strong class="history-summary-plus">+${monthTotal}pt</strong>です。</p>`;
+  html += `</div></div>`;
+  return html;
+}
+
+function buildRedeemMonthPageHtml(g) {
+  const label = `${g.year}年${g.month}月`;
+  const n = g.items.length;
+  const monthSpent = g.items.reduce((s, d) => s + Math.abs(Number(d.points) || 0), 0);
+  let html = `<div class="history-month-block history-month-block--page">`;
+  html += `<h5 class="history-month-title">${label}</h5>`;
+  html += "<table class='history-table'><thead><tr><th>日時</th><th>商品</th><th>使用</th></tr></thead><tbody>";
+  for (const d of g.items) {
+    const spent = Math.abs(Number(d.points) || 0);
+    const itemLabel = escapeHtml(d.item || "交換");
+    html += `<tr><td>${formatTransactionDate(d)}</td><td>${itemLabel}</td><td class="history-pts-cell history-pts-minus">-${spent}pt</td></tr>`;
+  }
+  html += "</tbody></table>";
+  html += `<div class="history-month-foot">`;
+  html += `<p class="history-month-line">${label}の商品交換は<strong>${n}回</strong>です。</p>`;
+  html += `<p class="history-month-line">使用したポイント合計は<strong class="history-summary-minus">${monthSpent}pt</strong>です。</p>`;
+  html += `</div></div>`;
+  return html;
+}
+
+function refreshAttendanceMonthPageUI() {
+  const st = window._userHistoryPager;
+  if (!st || !st.attendanceGroups.length) return;
+  const groups = st.attendanceGroups;
+  const idx = st.attendanceIndex;
+  const g = groups[idx];
+  const pageEl = document.getElementById("history-attendance-month-page");
+  const labelEl = document.getElementById("history-attendance-month-label");
+  const countEl = document.getElementById("history-attendance-month-count");
+  const olderBtn = document.getElementById("history-attendance-month-older");
+  const newerBtn = document.getElementById("history-attendance-month-newer");
+  if (!pageEl || !labelEl || !countEl || !olderBtn || !newerBtn) return;
+  pageEl.innerHTML = buildAttendanceMonthPageHtml(g);
+  labelEl.textContent = `${g.year}年${g.month}月`;
+  countEl.textContent = `${idx + 1} / ${groups.length}`;
+  olderBtn.disabled = idx >= groups.length - 1;
+  newerBtn.disabled = idx <= 0;
+}
+
+function refreshRedeemMonthPageUI() {
+  const st = window._userHistoryPager;
+  if (!st || !st.redeemGroups.length) return;
+  const groups = st.redeemGroups;
+  const idx = st.redeemIndex;
+  const g = groups[idx];
+  const pageEl = document.getElementById("history-redeem-month-page");
+  const labelEl = document.getElementById("history-redeem-month-label");
+  const countEl = document.getElementById("history-redeem-month-count");
+  const olderBtn = document.getElementById("history-redeem-month-older");
+  const newerBtn = document.getElementById("history-redeem-month-newer");
+  if (!pageEl || !labelEl || !countEl || !olderBtn || !newerBtn) return;
+  pageEl.innerHTML = buildRedeemMonthPageHtml(g);
+  labelEl.textContent = `${g.year}年${g.month}月`;
+  countEl.textContent = `${idx + 1} / ${groups.length}`;
+  olderBtn.disabled = idx >= groups.length - 1;
+  newerBtn.disabled = idx <= 0;
+}
+
+function userHistoryMonthNavigate(panel, delta) {
+  const st = window._userHistoryPager;
+  if (!st) return;
+  if (panel === "attendance") {
+    const groups = st.attendanceGroups;
+    if (!groups.length) return;
+    st.attendanceIndex = Math.max(0, Math.min(groups.length - 1, st.attendanceIndex + delta));
+    refreshAttendanceMonthPageUI();
+  } else if (panel === "redeem") {
+    const groups = st.redeemGroups;
+    if (!groups.length) return;
+    st.redeemIndex = Math.max(0, Math.min(groups.length - 1, st.redeemIndex + delta));
+    refreshRedeemMonthPageUI();
+  }
+}
+
+function mountUserHistoryMonthPagerControls() {
+  const olderA = document.getElementById("history-attendance-month-older");
+  if (olderA) {
+    olderA.onclick = () => userHistoryMonthNavigate("attendance", 1);
+    document.getElementById("history-attendance-month-newer").onclick = () => userHistoryMonthNavigate("attendance", -1);
+    refreshAttendanceMonthPageUI();
+  }
+  const olderR = document.getElementById("history-redeem-month-older");
+  if (olderR) {
+    olderR.onclick = () => userHistoryMonthNavigate("redeem", 1);
+    document.getElementById("history-redeem-month-newer").onclick = () => userHistoryMonthNavigate("redeem", -1);
+    refreshRedeemMonthPageUI();
+  }
+}
+
 // --- 画面操作 ---
 window.hideSections = function() {
   document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
@@ -277,64 +391,42 @@ window.viewUserHistory = async function(userId) {
     const attendanceRows = historyData.filter((d) => d.type === "attendance");
     const redeemRows = historyData.filter((d) => d.type === "redeem");
 
-    let attendanceBody = "";
-    if (attendanceRows.length === 0) {
-      attendanceBody = '<p class="history-panel-empty">まだ出席の記録がありません</p>';
-    } else {
-      attendanceBody =
-        '<p class="attendance-cal-legend attendance-cal-legend--panel"><span class="cal-legend-swatch" aria-hidden="true"></span> <strong>緑</strong>の日が出席記録があります（<span class="cal-legend-today">枠</span>は今日）</p>';
-      attendanceBody += '<div class="history-month-stack">';
-      for (const g of groupTransactionsByYearMonth(attendanceRows)) {
-        const label = `${g.year}年${g.month}月`;
-        const n = g.items.length;
-        const monthTotal = g.items.reduce((s, d) => s + (Number(d.points) || 0), 0);
-        const monthDayKeys = new Set();
-        for (const row of g.items) {
-          const k = attendanceDateKeyLocal(row);
-          if (k) monthDayKeys.add(k);
-        }
-        attendanceBody += `<div class="history-month-block">`;
-        attendanceBody += `<h5 class="history-month-title">${label}</h5>`;
-        attendanceBody += renderAttendanceCalendar(g.year, g.month, monthDayKeys);
-        attendanceBody += "<table class='history-table'><thead><tr><th>日時</th><th>獲得</th></tr></thead><tbody>";
-        for (const d of g.items) {
-          const pts = Number(d.points) || 0;
-          attendanceBody += `<tr><td>${formatTransactionDate(d)}</td><td class="history-pts-cell history-pts-plus">+${pts}pt</td></tr>`;
-        }
-        attendanceBody += "</tbody></table>";
-        attendanceBody += `<div class="history-month-foot">`;
-        attendanceBody += `<p class="history-month-line">${label}の出席回数は<strong>${n}回</strong>です。</p>`;
-        attendanceBody += `<p class="history-month-line">獲得合計は<strong class="history-summary-plus">+${monthTotal}pt</strong>です。</p>`;
-        attendanceBody += `</div></div>`;
-      }
-      attendanceBody += "</div>";
-    }
+    const attendanceGroups = attendanceRows.length > 0 ? groupTransactionsByYearMonth(attendanceRows) : [];
+    const redeemGroups = redeemRows.length > 0 ? groupTransactionsByYearMonth(redeemRows) : [];
 
-    let redeemBody = "";
-    if (redeemRows.length === 0) {
-      redeemBody = '<p class="history-panel-empty">まだ商品交換の記録がありません</p>';
-    } else {
-      redeemBody = '<div class="history-month-stack">';
-      for (const g of groupTransactionsByYearMonth(redeemRows)) {
-        const label = `${g.year}年${g.month}月`;
-        const n = g.items.length;
-        const monthSpent = g.items.reduce((s, d) => s + Math.abs(Number(d.points) || 0), 0);
-        redeemBody += `<div class="history-month-block">`;
-        redeemBody += `<h5 class="history-month-title">${label}</h5>`;
-        redeemBody += "<table class='history-table'><thead><tr><th>日時</th><th>商品</th><th>使用</th></tr></thead><tbody>";
-        for (const d of g.items) {
-          const spent = Math.abs(Number(d.points) || 0);
-          const itemLabel = escapeHtml(d.item || "交換");
-          redeemBody += `<tr><td>${formatTransactionDate(d)}</td><td>${itemLabel}</td><td class="history-pts-cell history-pts-minus">-${spent}pt</td></tr>`;
-        }
-        redeemBody += "</tbody></table>";
-        redeemBody += `<div class="history-month-foot">`;
-        redeemBody += `<p class="history-month-line">${label}の商品交換は<strong>${n}回</strong>です。</p>`;
-        redeemBody += `<p class="history-month-line">使用したポイント合計は<strong class="history-summary-minus">${monthSpent}pt</strong>です。</p>`;
-        redeemBody += `</div></div>`;
-      }
-      redeemBody += "</div>";
-    }
+    window._userHistoryPager = {
+      attendanceGroups,
+      redeemGroups,
+      attendanceIndex: 0,
+      redeemIndex: 0
+    };
+
+    const attendanceBody =
+      attendanceGroups.length === 0
+        ? '<p class="history-panel-empty">まだ出席の記録がありません</p>'
+        : `<p class="attendance-cal-legend attendance-cal-legend--panel"><span class="cal-legend-swatch" aria-hidden="true"></span> <strong>緑</strong>の日が出席記録があります（<span class="cal-legend-today">枠</span>は今日）</p>
+          <nav class="history-month-pager" aria-label="出席の月を切り替え">
+            <button type="button" class="history-month-nav-btn" id="history-attendance-month-older">← もっと古い月</button>
+            <div class="history-month-pager-meta">
+              <span class="history-month-pager-label" id="history-attendance-month-label"></span>
+              <span class="history-month-pager-count" id="history-attendance-month-count"></span>
+            </div>
+            <button type="button" class="history-month-nav-btn" id="history-attendance-month-newer">もっと新しい月 →</button>
+          </nav>
+          <div class="history-month-page" id="history-attendance-month-page"></div>`;
+
+    const redeemBody =
+      redeemGroups.length === 0
+        ? '<p class="history-panel-empty">まだ商品交換の記録がありません</p>'
+        : `<nav class="history-month-pager" aria-label="交換の月を切り替え">
+            <button type="button" class="history-month-nav-btn" id="history-redeem-month-older">← もっと古い月</button>
+            <div class="history-month-pager-meta">
+              <span class="history-month-pager-label" id="history-redeem-month-label"></span>
+              <span class="history-month-pager-count" id="history-redeem-month-count"></span>
+            </div>
+            <button type="button" class="history-month-nav-btn" id="history-redeem-month-newer">もっと新しい月 →</button>
+          </nav>
+          <div class="history-month-page" id="history-redeem-month-page"></div>`;
 
     const html = `${headerHtml}
       <div class="history-panels">
@@ -349,6 +441,7 @@ window.viewUserHistory = async function(userId) {
       </div>`;
 
     list.innerHTML = html;
+    mountUserHistoryMonthPagerControls();
   } catch (e) {
     list.innerHTML = "エラー: " + e.message;
   }
