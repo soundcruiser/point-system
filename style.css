@@ -34,10 +34,153 @@ header {
 
 /* ナビゲーション・ボタン */
 nav {
-    padding: 20px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
+}
+
+.menu-group {
+    border-radius: 16px;
+    padding: 16px 16px 18px;
+    border: 1px solid #e0e0e0;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.menu-group-attendance {
+    border-color: #a5d6a7;
+    background: linear-gradient(180deg, #e8f5e9 0%, #f1f8f4 100%);
+}
+
+.menu-group-redeem {
+    border-color: #90caf9;
+    background: linear-gradient(180deg, #e3f2fd 0%, #f5f9ff 100%);
+}
+
+.menu-group-admin {
+    border-color: #cfd8dc;
+    background: #f5f5f5;
+}
+
+.menu-group-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #263238;
+    letter-spacing: 0.02em;
+}
+
+.menu-group-desc {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: #546e7a;
+    margin: -4px 0 0;
+}
+
+.menu-group-admin .menu-group-title {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.menu-group .btn-main {
+    margin-top: 2px;
+}
+
+.section-intro {
+    margin-bottom: 8px;
+}
+
+.section-intro h2 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+}
+
+.section-hint {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: #546e7a;
+    padding: 10px 12px;
+    background: #e3f2fd;
+    border-radius: 10px;
+    border-left: 4px solid #2196f3;
+}
+
+.item-card {
+    cursor: pointer;
+    border: 1px solid #cfd8dc;
+    margin: 10px 0;
+    padding: 16px;
+    border-radius: 12px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.item-card:active {
+    transform: scale(0.98);
+}
+
+.item-card-name {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.item-card-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.item-card-cost {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #1565c0;
+}
+
+.item-card-cost-label {
+    font-size: 0.72rem;
+    color: #78909c;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.user-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    color: #5d4037;
+}
+
+.user-stats strong {
+    font-size: 1.05rem;
+    color: #e65100;
+}
+
+.points-badge {
+    display: inline-block;
+    min-width: 3.5em;
+    padding: 6px 10px;
+    text-align: right;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    background: #e3f2fd;
+    color: #0d47a1;
+    border-radius: 8px;
+    font-size: 0.95rem;
 }
 
 .btn-main {
