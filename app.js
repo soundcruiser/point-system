@@ -49,17 +49,44 @@ function transactionTimestampMs(d) {
   return 0;
 }
 
-function formatTransactionDate(d) {
+function transactionDate(d) {
   try {
-    let dateObj;
-    if (d.timestamp && d.timestamp.toDate) dateObj = d.timestamp.toDate();
-    else if (Array.isArray(d.date)) dateObj = new Date(d.date[0]);
-    else if (d.date) dateObj = new Date(d.date);
-    else dateObj = new Date(0);
+    if (d.timestamp && d.timestamp.toDate) return d.timestamp.toDate();
+    if (Array.isArray(d.date)) return new Date(d.date[0]);
+    if (d.date) return new Date(d.date);
+  } catch {
+    /* fallthrough */
+  }
+  return new Date(0);
+}
+
+function formatTransactionDate(d) {
+  const dateObj = transactionDate(d);
+  if (!dateObj.getTime()) return "—";
+  try {
     return dateObj.toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
   } catch {
     return "—";
   }
+}
+
+function groupTransactionsByYearMonth(rows) {
+  const map = new Map();
+  for (const row of rows) {
+    const dt = transactionDate(row);
+    const y = dt.getFullYear();
+    const m = dt.getMonth() + 1;
+    const key = `${y}-${String(m).padStart(2, "0")}`;
+    if (!map.has(key)) map.set(key, { year: y, month: m, items: [] });
+    map.get(key).items.push(row);
+  }
+  for (const g of map.values()) {
+    g.items.sort((a, b) => transactionTimestampMs(b) - transactionTimestampMs(a));
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return b.month - a.month;
+  });
 }
 
 // --- 画面操作 ---
@@ -208,53 +235,66 @@ window.viewUserHistory = async function(userId) {
     const attendanceRows = historyData.filter((d) => d.type === "attendance");
     const redeemRows = historyData.filter((d) => d.type === "redeem");
 
-    const attendanceTotal = attendanceRows.reduce((s, d) => s + (Number(d.points) || 0), 0);
-    const redeemSpentTotal = redeemRows.reduce((s, d) => s + Math.abs(Number(d.points) || 0), 0);
-
     let attendanceBody = "";
     if (attendanceRows.length === 0) {
       attendanceBody = '<p class="history-panel-empty">まだ出席の記録がありません</p>';
     } else {
-      attendanceBody = "<table class='history-table'><thead><tr><th>日時</th><th>獲得</th></tr></thead><tbody>";
-      attendanceRows.forEach((d) => {
-        const pts = Number(d.points) || 0;
-        attendanceBody += `<tr><td>${formatTransactionDate(d)}</td><td class="history-pts-cell history-pts-plus">+${pts}pt</td></tr>`;
-      });
-      attendanceBody += "</tbody></table>";
+      attendanceBody = '<div class="history-month-stack">';
+      for (const g of groupTransactionsByYearMonth(attendanceRows)) {
+        const label = `${g.year}年${g.month}月`;
+        const n = g.items.length;
+        const monthTotal = g.items.reduce((s, d) => s + (Number(d.points) || 0), 0);
+        attendanceBody += `<div class="history-month-block">`;
+        attendanceBody += `<h5 class="history-month-title">${label}</h5>`;
+        attendanceBody += "<table class='history-table'><thead><tr><th>日時</th><th>獲得</th></tr></thead><tbody>";
+        for (const d of g.items) {
+          const pts = Number(d.points) || 0;
+          attendanceBody += `<tr><td>${formatTransactionDate(d)}</td><td class="history-pts-cell history-pts-plus">+${pts}pt</td></tr>`;
+        }
+        attendanceBody += "</tbody></table>";
+        attendanceBody += `<div class="history-month-foot">`;
+        attendanceBody += `<p class="history-month-line">${label}の出席回数は<strong>${n}回</strong>です。</p>`;
+        attendanceBody += `<p class="history-month-line">獲得合計は<strong class="history-summary-plus">+${monthTotal}pt</strong>です。</p>`;
+        attendanceBody += `</div></div>`;
+      }
+      attendanceBody += "</div>";
     }
 
     let redeemBody = "";
     if (redeemRows.length === 0) {
       redeemBody = '<p class="history-panel-empty">まだ商品交換の記録がありません</p>';
     } else {
-      redeemBody = "<table class='history-table'><thead><tr><th>日時</th><th>商品</th><th>使用</th></tr></thead><tbody>";
-      redeemRows.forEach((d) => {
-        const spent = Math.abs(Number(d.points) || 0);
-        const itemLabel = escapeHtml(d.item || "交換");
-        redeemBody += `<tr><td>${formatTransactionDate(d)}</td><td>${itemLabel}</td><td class="history-pts-cell history-pts-minus">-${spent}pt</td></tr>`;
-      });
-      redeemBody += "</tbody></table>";
+      redeemBody = '<div class="history-month-stack">';
+      for (const g of groupTransactionsByYearMonth(redeemRows)) {
+        const label = `${g.year}年${g.month}月`;
+        const n = g.items.length;
+        const monthSpent = g.items.reduce((s, d) => s + Math.abs(Number(d.points) || 0), 0);
+        redeemBody += `<div class="history-month-block">`;
+        redeemBody += `<h5 class="history-month-title">${label}</h5>`;
+        redeemBody += "<table class='history-table'><thead><tr><th>日時</th><th>商品</th><th>使用</th></tr></thead><tbody>";
+        for (const d of g.items) {
+          const spent = Math.abs(Number(d.points) || 0);
+          const itemLabel = escapeHtml(d.item || "交換");
+          redeemBody += `<tr><td>${formatTransactionDate(d)}</td><td>${itemLabel}</td><td class="history-pts-cell history-pts-minus">-${spent}pt</td></tr>`;
+        }
+        redeemBody += "</tbody></table>";
+        redeemBody += `<div class="history-month-foot">`;
+        redeemBody += `<p class="history-month-line">${label}の商品交換は<strong>${n}回</strong>です。</p>`;
+        redeemBody += `<p class="history-month-line">使用したポイント合計は<strong class="history-summary-minus">${monthSpent}pt</strong>です。</p>`;
+        redeemBody += `</div></div>`;
+      }
+      redeemBody += "</div>";
     }
 
     const html = `${headerHtml}
       <div class="history-panels">
         <div class="history-panel history-panel-attendance">
-          <h4 class="history-panel-title">出席履歴</h4>
+          <h4 class="history-panel-title">出席履歴（月別）</h4>
           ${attendanceBody}
-          <div class="history-panel-summary">
-            <span class="history-summary-label">出席での獲得合計</span>
-            <span class="history-summary-value history-summary-plus">+${attendanceTotal}pt</span>
-            <span class="history-summary-count">（${attendanceRows.length}回）</span>
-          </div>
         </div>
         <div class="history-panel history-panel-redeem">
-          <h4 class="history-panel-title">商品交換履歴</h4>
+          <h4 class="history-panel-title">商品交換履歴（月別）</h4>
           ${redeemBody}
-          <div class="history-panel-summary">
-            <span class="history-summary-label">交換で使用したポイント合計</span>
-            <span class="history-summary-value history-summary-minus">-${redeemSpentTotal}pt</span>
-            <span class="history-summary-count">（${redeemRows.length}回）</span>
-          </div>
         </div>
       </div>`;
 
